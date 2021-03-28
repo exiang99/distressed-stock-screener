@@ -8,6 +8,7 @@ import yfinance as yf
 import csv
 import requests
 import pandas as pd
+import numpy as np
 
 
 def get_ticker_lst():
@@ -43,9 +44,11 @@ def calculate_altman_score(ticker):
         first_column = balance_sheet.columns[0]
         total_assets = int(balance_sheet.loc["Total Assets", str(first_column)])
         total_liabilities = int(balance_sheet.loc["Total Liab", str(first_column)])
-        working_capital = int(balance_sheet.loc["Total Current Assets", str(first_column)]) - int(balance_sheet.loc["Total Current Liabilities", str(first_column)])
+        working_capital = int(balance_sheet.loc["Total Current Assets", str(
+                                    first_column)]) - int(balance_sheet.loc[
+                                    "Total Current Liabilities", str(first_column)])
         retained_earnings = int(balance_sheet.loc["Retained Earnings", str(first_column)])
-        sales = income_statement.iloc[-1, 0] #technically getting revenue but whatever
+        sales = income_statement.iloc[-1, 0] #technically getting revenue lel
     except (KeyError, ValueError):
         print ("There is not enough data on " + ticker)
         return None
@@ -72,12 +75,14 @@ def run_database(threshold):
     '''
     ticker_lst = get_ticker_lst()
     final_lst = {}
+    missing_lst = []
     print(ticker_lst[0:10])
     for ticker in ticker_lst[0:10]:
         altman_score = calculate_altman_score(ticker)
         print(ticker, altman_score)
         if altman_score == None:
+            missing_lst.append(ticker)
             print ("Lack of data means " + ticker + "'s score cannot be determined")
         elif altman_score <= threshold:
             final_lst[ticker] = altman_score
-    return final_lst
+    return final_lst, missing_lst
