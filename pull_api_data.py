@@ -28,7 +28,7 @@ def calculate_altman_score(ticker):
     '''
     Given a ticker, find its Altman Z score
     Input: ticker (str)
-    Returns: Altman Zscore (int)
+    Returns: Altman Zscore (int) or None
         ** A score below 1.8 means it's likely the company is headed for bankruptcy,
         while companies with scores above 3 are not likely to go bankrupt **
     '''
