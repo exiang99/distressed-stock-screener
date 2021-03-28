@@ -46,11 +46,11 @@ def calculate_altman_score(ticker):
         working_capital = int(balance_sheet.loc["Total Current Assets", str(first_column)]) - int(balance_sheet.loc["Total Current Liabilities", str(first_column)])
         retained_earnings = int(balance_sheet.loc["Retained Earnings", str(first_column)])
         sales = income_statement.iloc[-1, 0] #technically getting revenue but whatever
-        mv_equity = yf.Ticker(ticker).info['marketCap']
-        ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
     except (KeyError, ValueError):
         print ("There is not enough data on " + ticker)
         return None
+    mv_equity = yf.Ticker(ticker).info['marketCap']
+    ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
 
     A = working_capital / total_assets
     B = retained_earnings / total_assets
@@ -72,14 +72,12 @@ def run_database(threshold):
     '''
     ticker_lst = get_ticker_lst()
     final_lst = {}
-    print(ticker_lst[:10])
-    for ticker in ticker_lst[:10]:
-        try:
-            altman_score = calculate_altman_score(ticker)
-            if altman_score == None:
-                print ("Lack of data means " + ticker + "'s score cannot be determined")
-            elif altman_score <= threshold:
-                final_lst[ticker] = altman_score
-        except ValueError:
-            print("Cannot find " + ticker)
+    print(ticker_lst[0:10])
+    for ticker in ticker_lst[0:10]:
+        altman_score = calculate_altman_score(ticker)
+        print(ticker, altman_score)
+        if altman_score == None:
+            print ("Lack of data means " + ticker + "'s score cannot be determined")
+        elif altman_score <= threshold:
+            final_lst[ticker] = altman_score
     return final_lst
