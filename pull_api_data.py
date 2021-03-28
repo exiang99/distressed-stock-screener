@@ -31,17 +31,26 @@ def calculate_altman_score(ticker):
         ** A score below 1.8 means it's likely the company is headed for bankruptcy,
         while companies with scores above 3 are not likely to go bankrupt **
     '''
-    balance_sheet = yf.Ticker(ticker).balance_sheet
-    cash_flow = yf.Ticker(ticker).cashflow
-    income_statement = yf.Ticker(ticker).earnings
-
-    total_assets = balance_sheet.iloc[4, 0]
-    total_liabilities = balance_sheet.iloc[1, 0]
-    working_capital = balance_sheet.iloc[18, 0] - balance_sheet.iloc[13, 0]
-    retained_earnings = balance_sheet.iloc[7, 0]
-    sales = income_statement.iloc[-1, 0] #technically getting revenue but whatever
-    mv_equity = yf.Ticker(ticker).info['marketCap']
-    ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
+    try:
+        balance_sheet = yf.Ticker(ticker).balance_sheet
+        income_statement = yf.Ticker(ticker).earnings
+        if balance_sheet.empty:
+            print(ticker + "'s balance sheet is empty!")
+            return None
+        if income_statement.empty:
+            print(ticker + "'s income statement is empty!")
+            return None
+        first_column = balance_sheet.columns[0]
+        total_assets = int(balance_sheet.loc["Total Assets", str(first_column)])
+        total_liabilities = int(balance_sheet.loc["Total Liab", str(first_column)])
+        working_capital = int(balance_sheet.loc["Total Current Assets", str(first_column)]) - int(balance_sheet.loc["Total Current Liabilities", str(first_column)])
+        retained_earnings = int(balance_sheet.loc["Retained Earnings", str(first_column)])
+        sales = income_statement.iloc[-1, 0] #technically getting revenue but whatever
+        mv_equity = yf.Ticker(ticker).info['marketCap']
+        ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
+    except (KeyError, ValueError):
+        print ("There is not enough data on " + ticker)
+        return None
 
     A = working_capital / total_assets
     B = retained_earnings / total_assets
@@ -56,16 +65,21 @@ def calculate_altman_score(ticker):
 def run_database(threshold):
     '''
     This function finds the Altman score for all stock tickers
-    If stock is not found on yfinance, then 
+    If stock is not found on yfinance, then it is skipped over
     Inputs:
-        lst of tickers (lst)
         threshold value (float)
-    Returns: all the company tickers that match the threshold (lst)
+    Returns: all the companies that fit the threshold (dict) {stock ticker : Altman Z score}
     '''
     ticker_lst = get_ticker_lst()
-    
-    pass
-    # ticker_lst = get_ticker_lst()
-    # for ticker in ticker_lst:
-    #     stock = yf.Ticker(str(ticker))
-    #     print(stock.info)
+    final_lst = {}
+    print(ticker_lst[:10])
+    for ticker in ticker_lst[:10]:
+        try:
+            altman_score = calculate_altman_score(ticker)
+            if altman_score == None:
+                print ("Lack of data means " + ticker + "'s score cannot be determined")
+            elif altman_score <= threshold:
+                final_lst[ticker] = altman_score
+        except ValueError:
+            print("Cannot find " + ticker)
+    return final_lst
