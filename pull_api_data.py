@@ -49,11 +49,11 @@ def calculate_altman_score(ticker):
                                     "Total Current Liabilities", str(first_column)])
         retained_earnings = int(balance_sheet.loc["Retained Earnings", str(first_column)])
         sales = income_statement.iloc[-1, 0] #technically getting revenue lel
+        mv_equity = yf.Ticker(ticker).info['marketCap']
+        ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
     except (KeyError, ValueError):
         print ("There is not enough data on " + ticker)
         return None
-    mv_equity = yf.Ticker(ticker).info['marketCap']
-    ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
 
     A = working_capital / total_assets
     B = retained_earnings / total_assets
@@ -65,24 +65,49 @@ def calculate_altman_score(ticker):
     return z_score
 
 
+def determine_market_cap_size(ticker):
+    '''
+    Given ticker, determiner what market size the company is
+    '''
+    market_cap = yf.Ticker(ticker).info['marketCap']
+    if market_cap <= 500000000:
+        market_cap_size = "nano-cap"
+    elif 50000000 < market_cap <= 300000000:
+        market_cap_size = "micro-cap"
+    elif 300000000 < market_cap <= 2000000000:
+        market_cap_size = "small-cap"
+    elif 2000000000 < market_cap <= 10000000000:
+        market_cap_size = "mid-cap"
+    elif 10000000000 < market_cap:    
+        market_cap_size = "large-cap"
+    market_cap_adj = "{:,}".format(market_cap)
+    return market_cap_adj, market_cap_size
+    
+
 def run_database(threshold):
     '''
     This function finds the Altman score for all stock tickers
     If stock is not found on yfinance, then it is skipped over
+    we also keep track of market cap
     Inputs:
         threshold value (float)
     Returns: all the companies that fit the threshold (dict) {stock ticker : Altman Z score}
+            along with market cap size
     '''
     ticker_lst = get_ticker_lst()
     final_lst = {}
     missing_lst = []
-    print(ticker_lst[0:10])
-    for ticker in ticker_lst[0:10]:
-        altman_score = calculate_altman_score(ticker)
-        print(ticker, altman_score)
-        if altman_score == None:
+    print(ticker_lst[1000:1005])
+    for ticker in ticker_lst[1000:1005]:
+        z_score = calculate_altman_score(ticker)
+        if z_score == None:
             missing_lst.append(ticker)
+            market_cap = "N/A"
+            market_cap_size = "N/A"
             print ("Lack of data means " + ticker + "'s score cannot be determined")
-        elif altman_score <= threshold:
-            final_lst[ticker] = altman_score
+        elif z_score <= threshold:
+            z_score = round(z_score, 5)
+            market_cap, market_cap_size = determine_market_cap_size(ticker)
+            final_lst[ticker] = z_score, market_cap, market_cap_size
+        print(ticker, z_score, market_cap, market_cap_size)
     return final_lst, missing_lst
