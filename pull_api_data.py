@@ -8,7 +8,6 @@ import yfinance as yf
 import csv
 import requests
 import pandas as pd
-import numpy as np
 
 
 def get_ticker_lst():
@@ -50,7 +49,12 @@ def calculate_altman_score(ticker):
         retained_earnings = int(balance_sheet.loc["Retained Earnings", str(first_column)])
         sales = income_statement.iloc[-1, 0] #technically getting revenue lel
         mv_equity = yf.Ticker(ticker).info['marketCap']
-        ebit = yf.Ticker(ticker).info['operatingMargins'] * sales
+        operating_margins = yf.Ticker(ticker).info['operatingMargins']
+        if operating_margins != None:
+            ebit = operating_margins * sales
+        else:
+            print ("There is not enough data on " + ticker + "'s operating margins")
+            return None
     except (KeyError, ValueError):
         print ("There is not enough data on " + ticker)
         return None
@@ -71,15 +75,15 @@ def determine_market_cap_size(ticker):
     '''
     market_cap = yf.Ticker(ticker).info['marketCap']
     if market_cap <= 500000000:
-        market_cap_size = "nano-cap"
+        market_cap_size = "Nano-Cap"
     elif 50000000 < market_cap <= 300000000:
-        market_cap_size = "micro-cap"
+        market_cap_size = "Micro-Cap"
     elif 300000000 < market_cap <= 2000000000:
-        market_cap_size = "small-cap"
+        market_cap_size = "Small-Cap"
     elif 2000000000 < market_cap <= 10000000000:
-        market_cap_size = "mid-cap"
+        market_cap_size = "Mid-Cap"
     elif 10000000000 < market_cap:    
-        market_cap_size = "large-cap"
+        market_cap_size = "Large-Cap"
     market_cap_adj = "{:,}".format(market_cap)
     return market_cap_adj, market_cap_size
     
@@ -97,8 +101,8 @@ def run_database(threshold):
     ticker_lst = get_ticker_lst()
     final_lst = {}
     missing_lst = []
-    print(ticker_lst[1000:1005])
-    for ticker in ticker_lst[1000:1005]:
+    print(ticker_lst[0:5])
+    for ticker in ticker_lst[0:5]:
         z_score = calculate_altman_score(ticker)
         if z_score == None:
             missing_lst.append(ticker)
@@ -108,6 +112,7 @@ def run_database(threshold):
         elif z_score <= threshold:
             z_score = round(z_score, 5)
             market_cap, market_cap_size = determine_market_cap_size(ticker)
-            final_lst[ticker] = z_score, market_cap, market_cap_size
-        print(ticker, z_score, market_cap, market_cap_size)
+            sector = yf.Ticker(ticker).info['sector']
+            final_lst[ticker] = z_score, market_cap, market_cap_size, sector
+        print(ticker, z_score, market_cap, market_cap_size, sector)
     return final_lst, missing_lst
